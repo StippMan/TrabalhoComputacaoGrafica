@@ -1,4 +1,5 @@
 from tkinter import *
+# from PIL import ImageTk, Image
 
 window = Tk() 
 window.title("Visualizer")
@@ -6,8 +7,11 @@ window.title("Visualizer")
 clearButton = Button(window,text="CLEAR")
 clearButton.grid(column = 1, row = 0)
 
+
+# rotateIcon = ImageTk.PhotoImage(Image.open("rotateIcon.png"))
 rotateButton = Button(window,text="ROTATE")
 rotateButton.grid(column = 2, row = 0)
+
 
 scaleButton = Button(window,text="SCALE")
 scaleButton.grid(column = 3, row = 0)
