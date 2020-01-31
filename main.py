@@ -35,17 +35,19 @@ class Rectangle(Polygon):
 
 class Circle(Polygon):
 	def __init__(self, coord1, coord2):
-		self.coordinates = [coord1]
 		self.radius = sqrt((coord2[0] - coord1[0])**2 + (coord2[1] - coord1[1])**2)
+		self.center = coord1
+		ne = (coord1[0] + self.radius, coord1[1] + self.radius)
+		nw = (coord1[0] - self.radius, coord1[1] + self.radius)
+		sw = (coord1[0] - self.radius, coord1[1] - self.radius)
+		se = (coord1[0] + self.radius, coord1[1] - self.radius)
+		
+		self.coordinates = [nw,ne,sw,se]
 	def __repr__(self):
-		return '\nCircle({},{})'.format(self.coordinates[0],self.radius)
+		return '\nCircle({}, {}, {})'.format(self.center,self.radius,self.coordinates)
 
 	def draw(self, canvas):
-		x1 = self.coordinates[0][0] - self.radius
-		y1 = self.coordinates[0][1] - self.radius
-		x2 = self.coordinates[0][0] + self.radius
-		y2 = self.coordinates[0][1] + self.radius
-		canvas.create_oval(x1, y1, x2, y2, width=2,outline="black")
+		canvas.create_oval(self.coordinates[0],self.coordinates[3], width=2,outline="black")
 
 
 class MainApp():
@@ -335,6 +337,7 @@ class MainApp():
 										1])
 				result = scaleMatrix.dot(pointMatrix)
 				shape.coordinates[i] = (result[0],result[1])
+
 	def scaleCanvas(self,event):
 		if self.clickNumber == 0:
 			self.getClicks(event)
@@ -420,41 +423,17 @@ class MainApp():
 			smallY = coord2[1]
 			bigY = coord1[1]
 		
+		midX = (bigX + smallX)/2
+		midY = (bigY + smallY)/2
 		
-		rw = self.canvas.winfo_width()/self.canvas.winfo_height()
-		rv = (bigX - smallX)/(bigY - smallY)
-
-		sx = self.canvas.winfo_width()/(bigX - smallX)
-		sy = self.canvas.winfo_height()/(bigY - smallY)
-
-		if rw > rv:
-			newbigY = (bigX - smallX)/rw + smallY		
-			sy = self.canvas.winfo_height()/(newbigY - smallY)
+		if (bigX - smallX) > (bigY - smallY):
+			s = self.canvas.winfo_width()/(bigX - smallX)
 		else:
-			newbigX = (bigY - smallY)*rw + smallX
-			sx = self.canvas.winfo_width()/(newbigX - smallX)
-			
+			s = self.canvas.winfo_height()/(bigY - smallY)
 
-		
-		if len(self.shapes) > 0:
-			# if rw > rv:
-			# 	zoomMatrix = np.array([[sx, 0, -1*sx*smallX],
-			# 							[0, sy, -1*sy*smallY-(bigY-newbigY)/2],#
-			# 							[0,	0, 1]])	
-			# else:
-			# 	zoomMatrix = np.array([[sx, 0, -1*sx*smallX-(bigX-newbigX)/2],#
-			# 							[0, sy, -1*sy*smallY],
-			# 							[0,	0, 1]])	
-			zoomMatrix = np.array([[sx, 0, -1*sx*smallX],
-									[0, sy, -1*sy*smallY],
-									[0,	0, 1]])	
-			for shape in self.shapes:
-				for i in range(len(shape.coordinates)):
-					pointMatrix = np.array([shape.coordinates[i][0],
-											shape.coordinates[i][1],
-											1])
-					result = zoomMatrix.dot(pointMatrix)
-					shape.coordinates[i] = (result[0],result[1])
+
+		self.scale(self.shapes,(midX,midY),s,s)
+		self.print(str(self.shapes),'wip')
 	
 	def zoomCanvas(self,event):
 		if self.clickNumber == 0:
@@ -466,26 +445,49 @@ class MainApp():
 			coord2 = self.clickCoords.pop()
 			coord1 = self.clickCoords.pop()
 			self.zoom(coord1,coord2)
+			self.print("Zoom realizado com sucesso",'system')
 			self.update()
 
 
 
 	def centralizeCanvas(self):
-		self.print("--==FUNCAO NAO IMPLEMENTADA==--", 'wip')
+		bigCoord = None
+		smallCoord = None
+		for shape in self.shapes:
+			for coord in shape.coordinates:
+				if bigCoord != None and smallCoord != None:
+					if coord[0] > bigCoord[0]:
+						bigCoord[0] = coord[0]
+					if coord[0] < smallCoord[0]:
+						smallCoord[0] = coord[0]
+					if coord[1] > bigCoord[1]:
+						bigCoord[1] = coord[1]
+					if coord[1] < smallCoord[1]:
+						smallCoord[1] = coord[1]
+				else:
+					bigCoord = list(coord)
+					smallCoord = list(coord)
 
-		# bigCoord = (-9999999,-9999999)
-		# smallCoord = (9999999,9999999)
-		# for shape in self.shapes:
-		# 	for coord in shape.coordinates:
-		# 		if coord[0] > bigCoord[0]:
-		# 			bigCoord[0] = coord[0]
-		# 		if coord[0] < smallCoord[0]:
-		# 			smallCoord[0] = coord[0]
-		# 		if coord[1] > bigCoord[1]:
-		# 			bigCoord[1] = coord[1]
-		# 		if coord[1] < smallCoord[1]:
-		# 			smallCoord[1] = coord[1]
-		
+		midX = (bigCoord[0] + smallCoord[0])/2
+		midY = (bigCoord[1] + smallCoord[1])/2
+
+		midScreenX = self.canvas.winfo_width()/2
+		midScreenY = self.canvas.winfo_height()/2
+		dx = midScreenX - midX
+		dy = midScreenY - midY
+
+
+		self.translate(self.shapes,dx,dy)
+
+		smallCoord[0] += dx-100
+		smallCoord[1] += dy-100
+		bigCoord[0] += dx+100
+		bigCoord[1] += dy+100
+
+		self.zoom(smallCoord,bigCoord)
+		self.print("Objetos centralizados com sucesso",'system')	
+		self.update()		
+
 	def drawPolygon(self,event):
 		if event.num == 1:
 			self.getClicks(event)
