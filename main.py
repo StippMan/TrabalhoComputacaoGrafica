@@ -90,6 +90,7 @@ class MainApp():
 		self.undoButton.pack(side=LEFT, padx=2, pady=2)
 
 		self.toolbar.grid(row=0,column=0, columnspan=2, sticky=NSEW)
+		self.window.bind('<Control-z>',self.undoAction)
 
 	def createStatusbar(self):
 		self.statusbar = Frame(self.root,bg="light gray")
@@ -233,8 +234,10 @@ class MainApp():
 		self.update()
 		self.print("Tela limpada",'system')
 
-	def undoAction(self):
-		self.print("--==FUNCAO NAO IMPLEMENTADA==--", 'wip')
+	def undoAction(self,event):                        # Precisa criar um historico de estado para a implementacao de toda a funcionalidade desta func.
+		if len(self.shapes)>0:
+			self.canvas.delete(self.shapes.pop())
+			self.update()
 
 	def getClicks(self,event):
 		self.clickNumber += 1
