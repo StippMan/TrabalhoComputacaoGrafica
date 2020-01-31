@@ -66,6 +66,7 @@ class MainApp():
 	def createToolbar(self):
 		self.toolbar = Frame(self.root, bg="")
 		
+		
 		self.centralizeButton = Button(self.toolbar,text="CENTRALIZE",command=self.centralizeCanvas)
 		self.zoomButton = Button(self.toolbar,text="ZOOM",command=self.changeToZoom)
 		self.moveButton = Button(self.toolbar,text="MOVE",command=self.changeToTranslate)
