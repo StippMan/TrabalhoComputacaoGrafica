@@ -3,34 +3,37 @@ from tkinter import *
 import tkinter.scrolledtext as tkst 
 from math import sqrt, pi, cos, sin
 import numpy as np
-class DrawnShape():
-	def __init__(self):
-		self.coordinates = [(0,0)]
+class Polygon():
+	def __init__(self,coords):
+		self.coordinates = coords
 
 	def draw(self, canvas):
 		canvas.create_polygon(self.coordinates,width=2,fill='',outline="black")
 
+	def __repr__(self):
+		return '\nPolygon({})'.format(self.coordinates)
 
-class Line(DrawnShape):
+
+class Line(Polygon):
 	def __init__(self, coord1,coord2):
 		self.coordinates = [coord1, coord2]
 
 	def __repr__(self):
 		return '\nLine({})'.format(self.coordinates)
 
-class Triangle(DrawnShape):
+class Triangle(Polygon):
 	def __init__(self, coord1,coord2,coord3):
 		self.coordinates = [coord1,coord2,coord3]
 	def __repr__(self):
 		return '\nTriangle({})'.format(self.coordinates)
 
-class Rectangle(DrawnShape):
+class Rectangle(Polygon):
 	def __init__(self, coord1,coord2):
 		self.coordinates = [coord1, (coord2[0],coord1[1]), coord2, (coord1[0],coord2[1])]
 	def __repr__(self):
 		return '\nRectangle({})'.format(self.coordinates)
 
-class Circle(DrawnShape):
+class Circle(Polygon):
 	def __init__(self, coord1, coord2):
 		self.coordinates = [coord1]
 		self.radius = sqrt((coord2[0] - coord1[0])**2 + (coord2[1] - coord1[1])**2)
@@ -53,7 +56,7 @@ class MainApp():
 
 		self.window = Tk()
 		self.window.title("Visualizer")
-		self.root = Frame(self.window,bg="grey") 
+		self.root = Frame(self.window,bg="light grey") 
 		self.createToolbar()
 		self.createStatusbar()
 		self.createShapebar()
@@ -64,9 +67,9 @@ class MainApp():
 		self.print("Aperte um dos botoes a esquerda para comecar",'system')
 
 	def createToolbar(self):
-		self.toolbar = Frame(self.root, bg="")
+		self.toolbar = Frame(self.root, bg="light gray")
 		
-		
+
 		self.centralizeButton = Button(self.toolbar,text="CENTRALIZE",command=self.centralizeCanvas)
 		self.zoomButton = Button(self.toolbar,text="ZOOM",command=self.changeToZoom)
 		self.moveButton = Button(self.toolbar,text="MOVE",command=self.changeToTranslate)
@@ -87,12 +90,13 @@ class MainApp():
 		self.toolbar.grid(row=0,column=0, columnspan=2, sticky=NSEW)
 
 	def createStatusbar(self):
-		self.statusbar = Frame(self.root,bg="gray")
+		self.statusbar = Frame(self.root,bg="light gray")
 
 		self.log = tkst.ScrolledText(self.statusbar,height = 5,fg="white",bg = "black")
 		self.log.tag_configure('system',foreground="lawn green")
 		self.log.tag_configure('error',foreground="red")
 		self.log.tag_configure('input',foreground="white")
+		self.log.tag_configure('wip',foreground="light gray")
 		self.log.pack(fill=X)
 
 		self.inputField = Entry(self.statusbar,fg="white",bg = "black")
@@ -103,7 +107,7 @@ class MainApp():
 		self.statusbar.grid(row=3,column=0, columnspan=2, sticky=NSEW)
 
 	def createShapebar(self):
-		self.shapebar = Frame(self.root, bg="grey")
+		self.shapebar = Frame(self.root, bg="light grey")
 
 
 		# self.lbl1 = Label(self.shapebar, text="DESENHOS",height=3, bg="grey")
@@ -113,26 +117,34 @@ class MainApp():
 		triangleImage = PhotoImage(file="triangle.png")
 		rectangleImage = PhotoImage(file="rectangle.png")
 		circleImage = PhotoImage(file="circle.png")
+		polygonImage = PhotoImage(file="polygon.png")
 
-		self.lineButton = Button(self.shapebar,image=lineImage,command=self.changeToLineMode)
-		self.triangleButton = Button(self.shapebar,image=triangleImage,command=self.changeToTriangleMode)
-		self.rectangleButton = Button(self.shapebar,image=rectangleImage,command=self.changeToRectangleMode)
-		self.circleButton = Button(self.shapebar,image=circleImage,command=self.changeToCircleMode)
+		self.lineButton = Button(self.shapebar,bg="white",image=lineImage,command=self.changeToLineMode)
+		self.triangleButton = Button(self.shapebar,bg="white",image=triangleImage,command=self.changeToTriangleMode)
+		self.rectangleButton = Button(self.shapebar,bg="white",image=rectangleImage,command=self.changeToRectangleMode)
+		self.circleButton = Button(self.shapebar,bg="white",image=circleImage,command=self.changeToCircleMode)
+		self.polygonButton = Button(self.shapebar,bg="white",image=polygonImage,command=self.changeToPolygonMode)
 
 		self.lineButton.image = lineImage
 		self.triangleButton.image = triangleImage
 		self.rectangleButton.image = rectangleImage
 		self.circleButton.image = circleImage
+		self.polygonButton.image = polygonImage
 
 		self.lineButton.pack(side=TOP, padx=2, pady=2, fill=X)
 		self.triangleButton.pack(side=TOP, padx=2, pady=2, fill=X)
 		self.rectangleButton.pack(side=TOP, padx=2, pady=2, fill=X)
 		self.circleButton.pack(side=TOP, padx=2, pady=2, fill=X)
+		self.polygonButton.pack(side=TOP, padx=2, pady=2, fill=X)
+
+		self.posLbl = Label(self.shapebar,text="X, Y",width=8,bg="light grey")
+		self.posLbl.pack(side=BOTTOM, padx=2, pady=2, fill=X)
 
 		self.shapebar.grid(row=1,column=0, sticky=NSEW)
 
 	def createCanvas(self):
 		self.canvas = Canvas(self.root, height=384, width=683, bg="white")
+		self.canvas.bind("<Motion>",self.updPos)
 		self.canvas.grid(row=1,column=1,sticky=NSEW)
 
 	def doNothing(self,event):
@@ -164,36 +176,52 @@ class MainApp():
 		for shape in self.shapes:
 			shape.draw(self.canvas)
 
+	def updPos(self,event):
+		self.posLbl.config(text= "{}, {}".format(event.x,event.y))
 
 	def changeToRotate(self):	
+		self.print("Selecione o ponto inicial da selecao",'system')
 		self.canvas.bind("<Button-1>", self.rotateCanvas)
 		self.update()
 		
 	def changeToScale(self):
+		self.print("Selecione o ponto inicial da selecao",'system')
 		self.canvas.bind("<Button-1>", self.scaleCanvas)
 		self.update()
 
 	def changeToTranslate(self):
+		self.print("Selecione o ponto inicial da selecao",'system')
 		self.canvas.bind("<Button-1>", self.translateCanvas)
 		self.update()
 
 	def changeToZoom(self):
+		self.print("Selecione o ponto inicial da selecao",'system')
 		self.canvas.bind("<Button-1>", self.zoomCanvas)
 		self.update()
 	
 	def changeToLineMode(self):
+		self.print("Selecione o primeiro ponto",'system')
 		self.canvas.bind("<Button-1>", self.drawLine)
 		self.update()
 
 	def changeToTriangleMode(self):
+		self.print("Selecione o primeiro ponto",'system')
 		self.canvas.bind("<Button-1>", self.drawTriangle)
 		self.update()
 
 	def changeToRectangleMode(self):
+		self.print("Selecione o primeiro ponto",'system')
 		self.canvas.bind("<Button-1>", self.drawRectangle)
 		self.update()
 
+	def changeToPolygonMode(self):
+		self.print("Selecione o primeiro ponto",'system')
+		self.canvas.bind("<Button-1>", self.drawPolygon)
+		self.canvas.bind("<Button-3>", self.drawPolygon)
+		self.update()
+
 	def changeToCircleMode(self):
+		self.print("Selecione o centro do circulo",'system')
 		self.canvas.bind("<Button-1>", self.drawCircle)
 		self.update()
 
@@ -201,13 +229,15 @@ class MainApp():
 	def clearCanvas(self):
 		self.shapes.clear()
 		self.update()
+		self.print("Tela limpada",'system')
 
 	def undoAction(self):
-		pass
+		self.print("--==FUNCAO NAO IMPLEMENTADA==--", 'wip')
 
 	def getClicks(self,event):
 		self.clickNumber += 1
 		self.clickCoords.append((event.x,event.y))
+		self.print("({}, {})".format(event.x,event.y),'input')
 
 	def selectPoint(self,coord):
 		currDist = 9999999
@@ -260,10 +290,12 @@ class MainApp():
 										1])
 				result = translationMatrix.dot(pointMatrix)
 				shape.coordinates[i] = (result[0],result[1])
+		
 
 	def translateCanvas(self,event):
-		if self.clickNumber < 1:
+		if self.clickNumber == 0:
 			self.getClicks(event)
+			self.print("Selecione o ponto final da selecao",'system')
 		else:
 			self.getClicks(event)
 			self.clickNumber = 0
@@ -290,6 +322,7 @@ class MainApp():
 
 				self.translate(selected,int(dx),int(dy))
 			self.update()
+			self.print("Objeto(s) transladado(s) {} no sentido X e {} no sentido Y".format(dx,dy),'system')
 
 	def scale(self,selected,anchor,sx,sy):
 		scaleMatrix = np.array([[sx, 0, anchor[0]-anchor[0]*sx],
@@ -305,6 +338,7 @@ class MainApp():
 	def scaleCanvas(self,event):
 		if self.clickNumber == 0:
 			self.getClicks(event)
+			self.print("Selecione o ponto final da selecao",'system')
 		elif self.clickNumber == 1:
 			self.getClicks(event)
 			self.print("Clique em um ponto servir de ancora para a escala",'system')
@@ -330,6 +364,7 @@ class MainApp():
 					sy = self.getSelfText()
 				self.scale(selected,anchor,float(sx),float(sy))
 			self.update()
+			self.print("Objeto(s) escalado(s) por {} no sentido X e por {} no sentido Y".format(sx,sy),'system')
 
 	def rotate(self,selected,anchor,t):
 		x = anchor[0]
@@ -348,6 +383,7 @@ class MainApp():
 	def rotateCanvas(self,event):
 		if self.clickNumber == 0:
 			self.getClicks(event)
+			self.print("Selecione o ponto final da selecao",'system')
 		elif self.clickNumber == 1:
 			self.getClicks(event)
 			self.print("Clique em um ponto servir de ancora para a rotacao",'system')
@@ -367,6 +403,7 @@ class MainApp():
 				t = -1*float(t)*pi/180		#transformando em radian
 				self.rotate(selected,anchor,t)
 			self.update()
+			self.print("Objeto(s) rotacionado(s) em {} graus".format(sx,sy),'system')
 
 	def zoom(self, coord1,coord2):
 		if coord1[0] <= coord2[0]:
@@ -422,6 +459,7 @@ class MainApp():
 	def zoomCanvas(self,event):
 		if self.clickNumber == 0:
 			self.getClicks(event)
+			self.print("Selecione o ponto final da selecao",'system')
 		else:
 			self.getClicks(event)
 			self.clickNumber = 0
@@ -433,24 +471,38 @@ class MainApp():
 
 
 	def centralizeCanvas(self):
-		bigCoord = (-9999999,-9999999)
-		smallCoord = (9999999,9999999)
-		for shape in self.shapes:
-			for coord in shape.coordinates:
-				if coord[0] > bigCoord[0]:
-					bigCoord[0] = coord[0]
-				if coord[0] < smallCoord[0]:
-					smallCoord[0] = coord[0]
-				if coord[1] > bigCoord[1]:
-					bigCoord[1] = coord[1]
-				if coord[1] < smallCoord[1]:
-					smallCoord[1] = coord[1]
-		
-		
+		self.print("--==FUNCAO NAO IMPLEMENTADA==--", 'wip')
 
+		# bigCoord = (-9999999,-9999999)
+		# smallCoord = (9999999,9999999)
+		# for shape in self.shapes:
+		# 	for coord in shape.coordinates:
+		# 		if coord[0] > bigCoord[0]:
+		# 			bigCoord[0] = coord[0]
+		# 		if coord[0] < smallCoord[0]:
+		# 			smallCoord[0] = coord[0]
+		# 		if coord[1] > bigCoord[1]:
+		# 			bigCoord[1] = coord[1]
+		# 		if coord[1] < smallCoord[1]:
+		# 			smallCoord[1] = coord[1]
+		
+	def drawPolygon(self,event):
+		if event.num == 1:
+			self.getClicks(event)
+			self.print("Selecione o proximo ponto (Botao direito para finalizar)",'system')
+		elif event.num == 3:
+			self.clickNumber = 0
+			coords = []
+			coords.extend(self.clickCoords)
+			self.clickCoords.clear()
+			self.shapes.append(Polygon(coords))
+			self.update()
+			self.print("Poligono finalizado",'system')
+			
 	def drawLine(self,event):
 		if self.clickNumber < 1:
 			self.getClicks(event)
+			self.print("Selecione o segundo ponto",'system')
 		else:
 			self.getClicks(event)
 			self.clickNumber = 0
@@ -460,8 +512,12 @@ class MainApp():
 			self.update()
 
 	def drawTriangle(self,event):
-		if self.clickNumber < 2:
+		if self.clickNumber == 0:
 			self.getClicks(event)
+			self.print("Selecione o segundo ponto",'system')
+		elif self.clickNumber == 1:
+			self.getClicks(event)
+			self.print("Selecione o terceiro ponto",'system')
 		else:
 			self.getClicks(event)
 			self.clickNumber = 0
@@ -474,6 +530,7 @@ class MainApp():
 	def drawRectangle(self,event):
 		if self.clickNumber < 1:
 			self.getClicks(event)
+			self.print("Selecione o segundo ponto",'system')
 		else:
 			self.getClicks(event)
 			self.clickNumber = 0
@@ -485,6 +542,7 @@ class MainApp():
 	def drawCircle(self,event):
 		if self.clickNumber < 1:
 			self.getClicks(event)
+			self.print("Selecione um ponto na circunferencia a ser desenhada",'system')
 		else:
 			self.getClicks(event)
 			self.clickNumber = 0
