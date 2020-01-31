@@ -50,14 +50,18 @@ class MainApp():
 		self.shapes = []
 		self.clickNumber = 0
 		self.clickCoords = []
+
 		self.window = Tk()
 		self.window.title("Visualizer")
 		self.root = Frame(self.window,bg="grey") 
 		self.createToolbar()
-		# self.createStatusbar()
+		self.createStatusbar()
 		self.createShapebar()
 		self.createCanvas()
 		self.root.pack()
+
+		self.inputFieldText = StringVar(self.window)
+		self.print("Aperte um dos botoes a esquerda para comecar",'system')
 
 	def createToolbar(self):
 		self.toolbar = Frame(self.root, bg="")
@@ -69,7 +73,7 @@ class MainApp():
 		self.rotateButton = Button(self.toolbar,text="ROTATE",command=self.changeToRotate)
 		self.clearButton = Button(self.toolbar,text="CLEAR",command=self.clearCanvas)
 		self.undoButton = Button(self.toolbar,text="UNDO",command=self.undoAction)
-		filler = Frame(self.toolbar,width=160, bg="")
+		filler = Frame(self.toolbar,width=100, bg="")
 		filler.pack(side=LEFT, padx=2, pady=2)
 		self.clearButton.pack(side=LEFT, padx=2, pady=2)
 		self.moveButton.pack(side=LEFT, padx=2, pady=2)
@@ -82,23 +86,42 @@ class MainApp():
 		self.toolbar.grid(row=0,column=0, columnspan=2, sticky=NSEW)
 
 	def createStatusbar(self):
-		self.statusbar = Frame(self.root, relief=SUNKEN, bg="grey")
-		self.textbox = tkst.ScrolledText(self.statusbar,wrap=WORD, bg="white", height = 5)
-		self.textbox.pack(side=LEFT, padx=2, pady=2)
+		self.statusbar = Frame(self.root,bg="gray")
 
-		self.statusbar.grid(row=2,column=0, columnspan=2, sticky=NSEW)
+		self.log = tkst.ScrolledText(self.statusbar,height = 5,fg="white",bg = "black")
+		self.log.tag_configure('system',foreground="lawn green")
+		self.log.tag_configure('error',foreground="red")
+		self.log.tag_configure('input',foreground="white")
+		self.log.pack(fill=X)
+
+		self.inputField = Entry(self.statusbar,fg="white",bg = "black")
+		self.inputField.bind('<Return>', self.getEntry)
+		self.inputField.bind('<KP_Enter>', self.getEntry,'+')
+		self.inputField.pack(fill=X)
+		
+		self.statusbar.grid(row=3,column=0, columnspan=2, sticky=NSEW)
 
 	def createShapebar(self):
 		self.shapebar = Frame(self.root, bg="grey")
 
 
-		self.lbl1 = Label(self.shapebar, text="DESENHOS",height=3, bg="grey")
-		self.lbl1.pack(side=TOP, padx=2, pady=2)
+		# self.lbl1 = Label(self.shapebar, text="DESENHOS",height=3, bg="grey")
+		# self.lbl1.pack(side=TOP, padx=2, pady=2)
 
-		self.lineButton = Button(self.shapebar,text="LINHA",command=self.changeToLineMode)
-		self.triangleButton = Button(self.shapebar,text="TRIANGULO",command=self.changeToTriangleMode)
-		self.rectangleButton = Button(self.shapebar,text="RETANGULO",command=self.changeToRectangleMode)
-		self.circleButton = Button(self.shapebar,text="CIRCULO",command=self.changeToCircleMode)
+		lineImage = PhotoImage(file="line.png")
+		triangleImage = PhotoImage(file="triangle.png")
+		rectangleImage = PhotoImage(file="rectangle.png")
+		circleImage = PhotoImage(file="circle.png")
+
+		self.lineButton = Button(self.shapebar,image=lineImage,command=self.changeToLineMode)
+		self.triangleButton = Button(self.shapebar,image=triangleImage,command=self.changeToTriangleMode)
+		self.rectangleButton = Button(self.shapebar,image=rectangleImage,command=self.changeToRectangleMode)
+		self.circleButton = Button(self.shapebar,image=circleImage,command=self.changeToCircleMode)
+
+		self.lineButton.image = lineImage
+		self.triangleButton.image = triangleImage
+		self.rectangleButton.image = rectangleImage
+		self.circleButton.image = circleImage
 
 		self.lineButton.pack(side=TOP, padx=2, pady=2, fill=X)
 		self.triangleButton.pack(side=TOP, padx=2, pady=2, fill=X)
@@ -108,10 +131,29 @@ class MainApp():
 		self.shapebar.grid(row=1,column=0, sticky=NSEW)
 
 	def createCanvas(self):
-		self.canvas = Canvas(self.root, height=600, width=800, bg="white")
-		self.canvas.grid(row=1,column=1)
+		self.canvas = Canvas(self.root, height=384, width=683, bg="white")
+		self.canvas.grid(row=1,column=1,sticky=NSEW)
 
+	def doNothing(self,event):
+		pass
 
+	def print(self,txt,tag):
+		self.log.config(state=NORMAL)
+		self.log.insert(END,'\n'+txt,tag)
+		self.log.config(state=DISABLED)
+		self.log.see(END)
+
+	def getEntry(self,event):
+		txt = self.inputField.get()
+		self.inputFieldText.set(txt)
+		self.inputField.delete(0, END)
+		self.print(txt,'input')
+
+	def getSelfText(self):
+		self.window.wait_variable(self.inputFieldText)
+		return self.inputFieldText.get()
+
+		
 	def addShape(self):
 		self.shapes.append(shape)
 
@@ -203,7 +245,7 @@ class MainApp():
                	 and eachShape not in selectedShapes:
 					selectedShapes.append(eachShape)
 		if len(selectedShapes) == 0:
-			print("Não selecionou nenhum objeto (tente selecionar os vertices ou, no caso de circulo, o centro)")
+			self.print("Nenhum objeto selecionado",'error')
 		return selectedShapes
 
 	def translate(self, selected,dx,dy):
@@ -230,10 +272,22 @@ class MainApp():
 			selected = self.selectShapes(coord1,coord2)
 			# print("selected: " + str(selected))
 			if len(selected) > 0:
-				dx = float(input("dx: "))
-				dy = float(input("dy: "))
+				# self.inputField.bind('<Return>', self.getEntry)
+				self.print("Dx:",'system')
+				dx = self.getSelfText()
+				while not dx.isnumeric():
+					self.print("O valor deve ser um numero",'error')
+					self.print("Dx:",'system')
+					dx = self.getSelfText()
 
-				self.translate(selected,dx,dy)
+				self.print("Dy:",'system')
+				dy = self.getSelfText()
+				while not dy.isnumeric():
+					self.print("O valor deve ser um numero",'error')
+					self.print("Dy:",'system')
+					dy = self.getSelfText()				# self.inputField.bind('<Return>', self.doNothing)
+
+				self.translate(selected,int(dx),int(dy))
 			self.update()
 
 	def scale(self,selected,anchor,sx,sy):
@@ -252,7 +306,7 @@ class MainApp():
 			self.getClicks(event)
 		elif self.clickNumber == 1:
 			self.getClicks(event)
-			print("Clique em um ponto servir de ancora para a escala")
+			self.print("Clique em um ponto servir de ancora para a escala",'system')
 		else:
 			anchor = self.selectPoint((event.x,event.y))
 			self.clickNumber = 0
@@ -260,9 +314,20 @@ class MainApp():
 			coord1 = self.clickCoords.pop()
 			selected = self.selectShapes(coord1,coord2)
 			if len(selected) > 0:
-				sx = float(input("sx: "))
-				sy = float(input("sy: "))
-				self.scale(selected,anchor,sx,sy)
+				self.print("Sx:",'system')
+				sx = self.getSelfText()
+				
+				while not isfloat(sx):
+					self.print("O valor deve ser um numero",'error')
+					self.print("Sx:",'system')
+					sx = self.getSelfText()
+				self.print("Sy:",'system')
+				sy = self.getSelfText()
+				while not isfloat(sy):
+					self.print("O valor deve ser um numero",'error')
+					self.print("Sy:",'system')
+					sy = self.getSelfText()
+				self.scale(selected,anchor,float(sx),float(sy))
 			self.update()
 
 	def rotate(self,selected,anchor,t):
@@ -284,16 +349,21 @@ class MainApp():
 			self.getClicks(event)
 		elif self.clickNumber == 1:
 			self.getClicks(event)
-			print("Clique em um ponto para rotacionar ao redor")
+			self.print("Clique em um ponto servir de ancora para a rotacao",'system')
 		else:
-			x,y = self.selectPoint((event.x,event.y))
+			anchor = self.selectPoint((event.x,event.y))
 			self.clickNumber = 0
 			coord2 = self.clickCoords.pop()
 			coord1 = self.clickCoords.pop()
 
 			selected = self.selectShapes(coord1,coord2)
 			if len(selected) > 0:
-				t = -1*float(input("theta: "))*pi/180
+				self.print("Angulo em graus para a rotacao: ",'system')
+				t = self.getSelfText()
+				while not isfloat(t):
+					self.print("O valor deve ser um numero",'error')
+					t = self.getSelfText()
+				t = -1*float(t)*pi/180		#transformando em radian
 				self.rotate(selected,anchor,t)
 			self.update()
 
@@ -329,17 +399,17 @@ class MainApp():
 
 		
 		if len(self.shapes) > 0:
-			if rw > rv:
-				zoomMatrix = np.array([[sx, 0, -1*sx*smallX],
-										[0, sy, -1*sy*smallY-(bigY-newbigY)/2],#
-										[0,	0, 1]])	
-			else:
-				zoomMatrix = np.array([[sx, 0, -1*sx*smallX-(bigX-newbigX)/2],#
-										[0, sy, -1*sy*smallY],
-										[0,	0, 1]])	
-			# zoomMatrix = np.array([[sx, 0, -1*sx*smallX],
-			# 						[0, sy, -1*sy*smallY],
-			# 						[0,	0, 1]])	
+			# if rw > rv:
+			# 	zoomMatrix = np.array([[sx, 0, -1*sx*smallX],
+			# 							[0, sy, -1*sy*smallY-(bigY-newbigY)/2],#
+			# 							[0,	0, 1]])	
+			# else:
+			# 	zoomMatrix = np.array([[sx, 0, -1*sx*smallX-(bigX-newbigX)/2],#
+			# 							[0, sy, -1*sy*smallY],
+			# 							[0,	0, 1]])	
+			zoomMatrix = np.array([[sx, 0, -1*sx*smallX],
+									[0, sy, -1*sy*smallY],
+									[0,	0, 1]])	
 			for shape in self.shapes:
 				for i in range(len(shape.coordinates)):
 					pointMatrix = np.array([shape.coordinates[i][0],
@@ -421,6 +491,13 @@ class MainApp():
 			coord1 = self.clickCoords.pop()
 			self.shapes.append(Circle(coord1,coord2))
 			self.update()
+
+def isfloat(value):
+  try:
+    float(value)
+    return True
+  except ValueError:
+    return False
 
 def runApp():
 	shapes = []
