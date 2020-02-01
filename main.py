@@ -54,6 +54,7 @@ class MainApp():
 		self.shapes = []
 		self.clickNumber = 0
 		self.clickCoords = []
+		self.actionHistory = []
 
 		self.window = Tk()
 		self.window.title("Visualizer")
@@ -227,14 +228,32 @@ class MainApp():
 
 
 	def clearCanvas(self):
+		self.actionHistory.append(["clear", self.shapes.copy()])
 		self.shapes.clear()
 		self.update()
 		self.print("Tela limpada",'system')
 
-	def undoAction(self,event):                        # Precisa criar um historico de estado para a implementacao de toda a funcionalidade desta func.
-		if len(self.shapes)>0:
-			self.canvas.delete(self.shapes.pop())
-			self.update()
+	def undoAction(self,event): 
+		if len(self.actionHistory) != 0:  
+			lastAction = self.actionHistory.pop()
+			if lastAction[0] == "clear":
+				self.shapes = lastAction[1]
+			if lastAction[0] == "translation":
+				self.translate(lastAction[1],-lastAction[2],-lastAction[3])
+			if lastAction[0] == "rotation":
+				self.rotate(lastAction[1],lastAction[2],-lastAction[3])
+			if lastAction[0] == "scaling":
+				self.scale(lastAction[1],lastAction[2],1/lastAction[3],1/lastAction[4])
+			if lastAction[0] == "create":
+				self.shapes.pop()
+			if lastAction[0] == "zoom":
+				self.scale(self.shapes,lastAction[1],1/lastAction[2],1/lastAction[2])
+			if lastAction[0] == "centralize": # ["centralize",dx,dy,midPoint,s]
+				self.scale(self.shapes,lastAction[3],1/lastAction[4],1/lastAction[4])
+				self.translate(self.shapes,-lastAction[1],-lastAction[2])
+			
+
+		self.update()
 
 	def getClicks(self,event):
 		self.clickNumber += 1
@@ -310,21 +329,24 @@ class MainApp():
 				# self.inputField.bind('<Return>', self.getEntry)
 				self.print("Dx:",'system')
 				dx = self.getSelfText()
-				while not dx.isnumeric():
+				while not isfloat(dx):
 					self.print("O valor deve ser um numero",'error')
 					self.print("Dx:",'system')
 					dx = self.getSelfText()
 
 				self.print("Dy:",'system')
 				dy = self.getSelfText()
-				while not dy.isnumeric():
+				while not isfloat(dy):
 					self.print("O valor deve ser um numero",'error')
 					self.print("Dy:",'system')
 					dy = self.getSelfText()				# self.inputField.bind('<Return>', self.doNothing)
+				dx = float(dx)
+				dy = float(dy)
+				self.actionHistory.append(["translation",selected.copy(),dx,dy])
+				self.translate(selected,dx,dy)
+				self.print("Objeto(s) transladado(s) {} no sentido X e {} no sentido Y".format(dx,dy),'system')
 
-				self.translate(selected,int(dx),int(dy))
 			self.update()
-			self.print("Objeto(s) transladado(s) {} no sentido X e {} no sentido Y".format(dx,dy),'system')
 
 	def scale(self,selected,anchor,sx,sy):
 		scaleMatrix = np.array([[sx, 0, anchor[0]-anchor[0]*sx],
@@ -365,9 +387,12 @@ class MainApp():
 					self.print("O valor deve ser um numero",'error')
 					self.print("Sy:",'system')
 					sy = self.getSelfText()
-				self.scale(selected,anchor,float(sx),float(sy))
+				sx = float(sx)
+				sy = float(sy)
+				self.actionHistory.append(["scaling",selected.copy(),anchor,sx,sy])
+				self.scale(selected,anchor,sx,sy)
+				self.print("Objeto(s) escalado(s) por {} no sentido X e por {} no sentido Y".format(sx,sy),'system')
 			self.update()
-			self.print("Objeto(s) escalado(s) por {} no sentido X e por {} no sentido Y".format(sx,sy),'system')
 
 	def rotate(self,selected,anchor,t):
 		x = anchor[0]
@@ -403,12 +428,13 @@ class MainApp():
 				while not isfloat(t):
 					self.print("O valor deve ser um numero",'error')
 					t = self.getSelfText()
-				t = -1*float(t)*pi/180		#transformando em radian
-				self.rotate(selected,anchor,t)
+				rad = -1*float(t)*pi/180		#transformando em radian
+				self.actionHistory.append(["rotation",selected.copy(),anchor,rad])
+				self.rotate(selected,anchor,rad)
+				self.print("Objeto(s) rotacionado(s) em {} graus".format(t),'system')
 			self.update()
-			self.print("Objeto(s) rotacionado(s) em {} graus".format(sx,sy),'system')
 
-	def zoom(self, coord1,coord2):
+	def calcZoomVars(self, coord1,coord2):
 		if coord1[0] <= coord2[0]:
 			smallX = coord1[0]
 			bigX = coord2[0]
@@ -425,14 +451,14 @@ class MainApp():
 		
 		midX = (bigX + smallX)/2
 		midY = (bigY + smallY)/2
+		midPoint = (midX,midY)
 		
 		if (bigX - smallX) > (bigY - smallY):
 			s = self.canvas.winfo_width()/(bigX - smallX)
 		else:
 			s = self.canvas.winfo_height()/(bigY - smallY)
 
-
-		self.scale(self.shapes,(midX,midY),s,s)
+		return midPoint,s
 		# self.print(str(self.shapes),'wip')
 	
 	def zoomCanvas(self,event):
@@ -444,7 +470,11 @@ class MainApp():
 			self.clickNumber = 0
 			coord2 = self.clickCoords.pop()
 			coord1 = self.clickCoords.pop()
-			self.zoom(coord1,coord2)
+			midPoint, s = self.calcZoomVars(coord1,coord2)
+			
+			self.actionHistory.append(["zoom",midPoint,s])
+			self.scale(self.shapes,midPoint,s,s)
+
 			self.print("Zoom realizado com sucesso",'system')
 			self.update()
 
@@ -467,25 +497,26 @@ class MainApp():
 				else:
 					bigCoord = list(coord)
 					smallCoord = list(coord)
+		if bigCoord != None and smallCoord != None:
+			midX = (bigCoord[0] + smallCoord[0])/2
+			midY = (bigCoord[1] + smallCoord[1])/2
 
-		midX = (bigCoord[0] + smallCoord[0])/2
-		midY = (bigCoord[1] + smallCoord[1])/2
+			midScreenX = self.canvas.winfo_width()/2
+			midScreenY = self.canvas.winfo_height()/2
+			dx = midScreenX - midX
+			dy = midScreenY - midY
 
-		midScreenX = self.canvas.winfo_width()/2
-		midScreenY = self.canvas.winfo_height()/2
-		dx = midScreenX - midX
-		dy = midScreenY - midY
+			smallCoord[0] += dx-100
+			smallCoord[1] += dy-100
+			bigCoord[0] += dx+100
+			bigCoord[1] += dy+100
 
+			midPoint, s = self.calcZoomVars(smallCoord,bigCoord)
 
-		self.translate(self.shapes,dx,dy)
-
-		smallCoord[0] += dx-100
-		smallCoord[1] += dy-100
-		bigCoord[0] += dx+100
-		bigCoord[1] += dy+100
-
-		self.zoom(smallCoord,bigCoord)
-		self.print("Objetos centralizados com sucesso",'system')	
+			self.actionHistory.append(["centralize",dx,dy,midPoint,s])
+			self.translate(self.shapes,dx,dy)
+			self.scale(self.shapes,midPoint,s,s)
+			self.print("Objetos centralizados com sucesso",'system')
 		self.update()		
 
 	def drawPolygon(self,event):
@@ -497,9 +528,10 @@ class MainApp():
 			coords = []
 			coords.extend(self.clickCoords)
 			self.clickCoords.clear()
+			self.actionHistory.append(["create"])
 			self.shapes.append(Polygon(coords))
-			self.update()
 			self.print("Poligono finalizado",'system')
+			self.update()
 			
 	def drawLine(self,event):
 		if self.clickNumber < 1:
@@ -510,6 +542,7 @@ class MainApp():
 			self.clickNumber = 0
 			coord2 = self.clickCoords.pop()
 			coord1 = self.clickCoords.pop()
+			self.actionHistory.append(["create"])
 			self.shapes.append(Line(coord1, coord2))
 			self.update()
 
@@ -526,6 +559,7 @@ class MainApp():
 			coord3 = self.clickCoords.pop()
 			coord2 = self.clickCoords.pop()
 			coord1 = self.clickCoords.pop()
+			self.actionHistory.append(["create"])
 			self.shapes.append(Triangle(coord1,coord2,coord3))
 			self.update()
 	
@@ -538,6 +572,7 @@ class MainApp():
 			self.clickNumber = 0
 			coord2 = self.clickCoords.pop()
 			coord1 = self.clickCoords.pop()
+			self.actionHistory.append(["create"])
 			self.shapes.append(Rectangle(coord1,coord2))
 			self.update()
 
@@ -550,6 +585,7 @@ class MainApp():
 			self.clickNumber = 0
 			coord2 = self.clickCoords.pop()
 			coord1 = self.clickCoords.pop()
+			self.actionHistory.append(["create"])
 			self.shapes.append(Circle(coord1,coord2))
 			self.update()
 
