@@ -50,11 +50,13 @@ class Circle(Polygon):
 		canvas.create_oval(self.coordinates[0],self.coordinates[3], width=2,outline="black")
 
 
+
 class MainApp():
 	def __init__(self):
 		self.shapes = []
 		self.clickNumber = 0
 		self.clickCoords = []
+		self.historico = []
 
 		self.window = Tk()
 		self.window.title("Visualizer")
@@ -91,6 +93,7 @@ class MainApp():
 
 		self.toolbar.grid(row=0,column=0, columnspan=2, sticky=NSEW)
 		self.window.bind('<Control-z>',self.undoAction)
+		self.window.bind('<Key>',self.getKeys)
 
 	def createStatusbar(self):
 		self.statusbar = Frame(self.root,bg="light gray")
@@ -145,6 +148,7 @@ class MainApp():
 
 		self.shapebar.grid(row=1,column=0, sticky=NSEW)
 
+
 	def createCanvas(self):
 		self.canvas = Canvas(self.root, height=384, width=683, bg="white")
 		self.canvas.bind("<Motion>",self.updPos)
@@ -196,6 +200,7 @@ class MainApp():
 		self.print("Selecione o ponto inicial da selecao",'system')
 		self.canvas.bind("<Button-1>", self.translateCanvas)
 		self.update()
+		self.historico([translate, ])
 
 	def changeToZoom(self):
 		self.print("Selecione o ponto inicial da selecao",'system')
@@ -229,7 +234,7 @@ class MainApp():
 		self.update()
 
 
-	def clearCanvas(self):
+	def clearCanvas(self):							#undo pro clear tem que refazer as figuras previamente feitas
 		self.shapes.clear()
 		self.update()
 		self.print("Tela limpada",'system')
@@ -239,6 +244,8 @@ class MainApp():
 			self.canvas.delete(self.shapes.pop())
 			self.update()
 
+	def getKeys(self,event):
+		self.print("{}".format(repr(event.keysym)),'input') 
 	def getClicks(self,event):
 		self.clickNumber += 1
 		self.clickCoords.append((event.x,event.y))
@@ -328,7 +335,7 @@ class MainApp():
 				self.translate(selected,int(dx),int(dy))
 			self.update()
 			self.print("Objeto(s) transladado(s) {} no sentido X e {} no sentido Y".format(dx,dy),'system')
-
+			self.historico.append(["Translate","{} e {}".format(dx,dy)])
 	def scale(self,selected,anchor,sx,sy):
 		scaleMatrix = np.array([[sx, 0, anchor[0]-anchor[0]*sx],
 								[0, sy, anchor[1]-anchor[1]*sy],
@@ -371,7 +378,7 @@ class MainApp():
 				self.scale(selected,anchor,float(sx),float(sy))
 			self.update()
 			self.print("Objeto(s) escalado(s) por {} no sentido X e por {} no sentido Y".format(sx,sy),'system')
-
+			self.historico.append(["scale","{} e {}".format(sx,sy)])
 	def rotate(self,selected,anchor,t):
 		x = anchor[0]
 		y = anchor[1]
@@ -410,6 +417,7 @@ class MainApp():
 				self.rotate(selected,anchor,t)
 			self.update()
 			self.print("Objeto(s) rotacionado(s) em {} graus".format(sx,sy),'system')
+			self.historico.append(["rotate","{} e {}".format(coord1,coord2)])
 
 	def zoom(self, coord1,coord2):
 		if coord1[0] <= coord2[0]:
@@ -450,6 +458,7 @@ class MainApp():
 			self.zoom(coord1,coord2)
 			self.print("Zoom realizado com sucesso",'system')
 			self.update()
+			self.historico.append(["zoom","{} e {}".format(coord1,coord2)])
 
 
 
@@ -489,7 +498,8 @@ class MainApp():
 
 		self.zoom(smallCoord,bigCoord)
 		self.print("Objetos centralizados com sucesso",'system')	
-		self.update()		
+		self.update()
+		self.historico.append(["centralizar"])		
 
 	def drawPolygon(self,event):
 		if event.num == 1:
@@ -503,6 +513,7 @@ class MainApp():
 			self.shapes.append(Polygon(coords))
 			self.update()
 			self.print("Poligono finalizado",'system')
+			self.historico.append([Polygon,"{}".format(coords)])
 			
 	def drawLine(self,event):
 		if self.clickNumber < 1:
@@ -515,7 +526,8 @@ class MainApp():
 			coord1 = self.clickCoords.pop()
 			self.shapes.append(Line(coord1, coord2))
 			self.update()
-
+			self.historico.append([Line,"{} e {}".format(coord1,coord2)])
+			print(self.historico)
 	def drawTriangle(self,event):
 		if self.clickNumber == 0:
 			self.getClicks(event)
@@ -531,6 +543,7 @@ class MainApp():
 			coord1 = self.clickCoords.pop()
 			self.shapes.append(Triangle(coord1,coord2,coord3))
 			self.update()
+			self.historico.append([Triangle,"{} , {} e {}".format(coord1,coord2,coord3)])
 	
 	def drawRectangle(self,event):
 		if self.clickNumber < 1:
@@ -543,6 +556,7 @@ class MainApp():
 			coord1 = self.clickCoords.pop()
 			self.shapes.append(Rectangle(coord1,coord2))
 			self.update()
+			self.historico.append([Rectangle,"{} e {}".format(coord1,coord2)])
 
 	def drawCircle(self,event):
 		if self.clickNumber < 1:
@@ -555,6 +569,7 @@ class MainApp():
 			coord1 = self.clickCoords.pop()
 			self.shapes.append(Circle(coord1,coord2))
 			self.update()
+			self.historico.append([Circle,"{} e {}".format(coord1,coord2)])
 
 def isfloat(value):
   try:
