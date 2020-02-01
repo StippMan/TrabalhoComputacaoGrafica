@@ -2,7 +2,13 @@
 
 Trabalho desenvolvido por:
 Gabriel A. Stipp - RA102919
-Gustavo Wanke - RA
+Gustavo Rodrigues Wanke - RA91671
+
+Executar o programa com:
+
+    python3 main.py
+
+(Windows é "python main.py" eu acho)
 
 Caso ocorra o erro:
 

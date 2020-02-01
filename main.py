@@ -66,7 +66,8 @@ class MainApp():
 		self.root.pack()
 
 		self.inputFieldText = StringVar(self.window)
-		self.print("Aperte um dos botoes a esquerda para comecar",'system')
+		self.print("Bem vindo",'system')
+		# self.print("O ctrl-Z somente funciona para acoes completas",'system')
 
 	def createToolbar(self):
 		self.toolbar = Frame(self.root, bg="light gray")
